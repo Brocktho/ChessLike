@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cnlcn2qttkdsc"]
+
+[ext_resource type="Script" path="res://src/Board.gd" id="1_28tql"]
+
+[node name="Board" type="Node2D"]
+scale = Vector2(2, 2)
+script = ExtResource("1_28tql")
+grey = Color(0.529412, 0.00784314, 0.258824, 1)

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://88mdkeh3p1gk"]
+
+[ext_resource type="Texture2D" uid="uid://faa7l7jqy6d1" path="res://Images/bh.png" id="1_b6k6d"]
+[ext_resource type="Script" path="res://src/Pieces/Knight.gd" id="2_gnk0c"]
+
+[node name="Knight" type="Sprite2D"]
+z_index = 1
+scale = Vector2(0.213, 0.213)
+texture = ExtResource("1_b6k6d")
+script = ExtResource("2_gnk0c")
