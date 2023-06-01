@@ -11,13 +11,17 @@ config_version=5
 [application]
 
 config/name="ChessLike"
-run/main_scene="res://src/board.tscn"
+run/main_scene="res://src/Board.tscn"
 config/features=PackedStringArray("4.0", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 Globals="*res://Globals.gd"
+
+[dotnet]
+
+project/assembly_name="ChessLike"
 
 [rendering]
 

@@ -1,6 +1,19 @@
-[gd_scene format=3 uid="uid://bbkuip6qcen6h"]
+[gd_scene load_steps=2 format=3 uid="uid://bbkuip6qcen6h"]
+
+[ext_resource type="Script" path="res://src/Tile.gd" id="1_sbwuj"]
 
 [node name="Tile" type="ColorRect"]
 offset_top = -8.0
 offset_right = 32.0
 offset_bottom = 24.0
+mouse_filter = 1
+script = ExtResource("1_sbwuj")
+
+[node name="ReferenceRect" type="ReferenceRect" parent="."]
+z_index = 1
+layout_mode = 0
+offset_right = 32.0
+offset_bottom = 32.0
+mouse_filter = 1
+border_color = Color(0, 0, 0, 1)
+editor_only = false

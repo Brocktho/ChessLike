@@ -1,9 +1,8 @@
-class_name Knight
+class_name Bishop 
 extends Piece
 
-
 func possible_moves():
-	available_moves = [];
+	available_moves = []
 	if exhausted:
 		return
-	self.horse_moves()
+	self.bishop_moves()

@@ -1,9 +1,8 @@
-class_name Knight
+class_name Rook
 extends Piece
 
-
 func possible_moves():
-	available_moves = [];
+	available_moves = []
 	if exhausted:
 		return
-	self.horse_moves()
+	self.rook_moves()
