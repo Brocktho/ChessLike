@@ -64,7 +64,7 @@ func respawn():
 		if child is Camera2D:
 			pass
 		else:
-			remove_child(child)
+			destroy_node(child)
 	init()
 
 func destroy():
@@ -74,7 +74,7 @@ func destroy():
 			var x = child.current_pos[0]
 			var y = child.current_pos[1]
 			if (x > Globals.w_edge || y > Globals.l_edge || not child.interactable):
-				remove_child(child)
+				destroy_node(child)
 
 func reload(reverse: bool):
 	if(reverse):
@@ -94,18 +94,22 @@ func reload(reverse: bool):
 func _ready():
 	init()
 	pass
+	
+func clear_highlights():
+	for highlight in highlights:
+		destroy_node(highlight)
+	highlights = []
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_delta):
-	pass
+func destroy_node(node: Node):
+	remove_child(node)
+	node.queue_free()
 
 func move_piece(piece: Piece, pos: Vector2, interaction: int = 0):
+	clear_highlights()
 	piece.position = Vector2(pos[0] * 32 + center[0], pos[1] * 32 + center[1])
 	grid.erase(str(piece.current_pos[0]) + str(piece.current_pos[1]))
 	piece.current_pos = pos
 	grid[str(pos[0]) + str(pos[1])] = piece
-	for highlight in highlights:
-		remove_child(highlight)
 	if interaction != 0:
 		piece.exhausted = true
 
@@ -121,7 +125,6 @@ func create_piece(type: PackedScene, dict_key, pos: Vector2 = Vector2(0,0), alig
 	var x = pos[0]
 	var y = pos[1]
 	if(str(x) + str(y) in grid):
-		print("Already occupied!")
 		return false;
 	var new_piece = type.instantiate().init(pos, alignment)
 	move_piece(new_piece, new_piece.current_pos)
@@ -152,9 +155,7 @@ func create_tile(pos: Vector2, color: Color, temp: bool, ):
 		highlights.append(t)
 
 func draw_moves(moves_array: Array, keyboard: bool, selected: Vector2):
-	for highlight in highlights:
-		remove_child(highlight)
-	highlights = []
+	clear_highlights()
 	if keyboard:
 		create_tile(selected, select_color, true)
 	for moves in moves_array:

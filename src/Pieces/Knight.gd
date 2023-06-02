@@ -6,4 +6,4 @@ func possible_moves():
 	available_moves = [];
 	if exhausted:
 		return
-	self.horse_moves()
+	horse_moves()
