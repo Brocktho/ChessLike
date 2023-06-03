@@ -1,6 +1,8 @@
 class_name Board
 extends Node2D
 
+signal noEnergy(force: bool)
+
 @export var white: Color = Color("ANTIQUE_WHITE")  # Square color
 @export var grey: Color = Color("DARK_SLATE_GRAY")  # Square color
 @export var mod_color: Color = Color("YELLOW")  # For highlighting squares
@@ -29,11 +31,23 @@ const king = "King";
 const bishop = "Bishop";
 const rook = "Rook";
 
+var player_turn = -1
+var max_energy = 5
+var energy = 5
+
+var initializing = true
+
 var player_pieces: Dictionary = {}
 
-var highlights: Array
+var highlights: Array[Tile]
 
 var selected_piece : Piece
+
+var progress_tile: Tile
+var progress_text: Label
+var energy_UI: Label
+
+const draw_order = [[horses, horse], [kings, king], [bishops, bishop], [rooks, rook],]
 
 func rng_x():
 	return rng.randi_range(0, Globals.w_edge)
@@ -47,9 +61,34 @@ func must_create(type: PackedScene, dict_key, back: int = 0, front: int = 3, ali
 		var pos = Vector2(rng_x(), rng_y(back, front))	
 		success = create_piece(type, dict_key, pos, alignment)
 
+func place_player_pieces():
+	for y in 2:
+		for x in 4:
+			var pos = Vector2(x, Globals.l_edge - y)
+			if y == 0:
+				var this_piece = draw_order[x]
+				create_piece(this_piece[0], this_piece[1], pos, -1)
+			else:
+				create_piece(pawns, pawn, pos, -1)
+
+func create_label(node: Node, text: String = "End Turn"):
+	var label = Label.new()
+	label.text = text
+	label.position = Vector2(0, 0)
+	node.add_child(label)
+	return label
+
 func init():
 	draw_board()
-	var odd = false;
+	if initializing:
+		var en = create_tile(Vector2(-4, 0), Color(Globals.clear), false)
+		energy_UI = create_label(en, "Energy: " + str(energy))
+		var t = create_tile(Vector2(Globals.board_width + 2, 0), Color("BLUE"), false)
+		progress_text = create_label(t)
+		t.interactable = true
+		t.connect("pressed", handle_progress)
+		progress_tile = t
+	place_player_pieces()
 	must_create(rooks, rook, 0, 1)
 	must_create(bishops, bishop, 0, 1)
 	must_create(horses, horse, 0, 1)
@@ -59,6 +98,7 @@ func init():
 
 func respawn():
 	grid = {}
+	player_pieces = {}
 	var children = get_children()
 	for child in children:
 		if child is Camera2D:
@@ -68,6 +108,7 @@ func respawn():
 	init()
 
 func destroy():
+	player_pieces = {}
 	var children = get_children()
 	for child in children:
 		if child is Tile:
@@ -104,16 +145,24 @@ func destroy_node(node: Node):
 	remove_child(node)
 	node.queue_free()
 
+func update_energy(new_val):
+	if new_val is Callable:
+		energy = new_val.call(energy)
+	else:
+		energy = new_val
+	energy_UI.text = "Energy: " + str(energy)
+	if energy <= 0:
+		noEnergy.emit()
+
 func move_piece(piece: Piece, pos: Vector2, interaction: int = 0):
 	clear_highlights()
-	piece.position = Vector2(pos[0] * 32 + center[0], pos[1] * 32 + center[1])
 	grid.erase(str(piece.current_pos[0]) + str(piece.current_pos[1]))
-	piece.current_pos = pos
 	grid[str(pos[0]) + str(pos[1])] = piece
+	piece.move(pos, interaction)
 	if interaction != 0:
-		piece.exhausted = true
+		update_energy(func(x): return x - 1)
 
-func add_player_piece(piece: Sprite2D, type):
+func add_player_piece(piece: Sprite2D, type: String):
 	var prev_pieces = []
 	if type in player_pieces:
 		prev_pieces = player_pieces[type]
@@ -121,17 +170,19 @@ func add_player_piece(piece: Sprite2D, type):
 	prev_pieces.append(piece)
 	player_pieces[type] = prev_pieces
 
-func create_piece(type: PackedScene, dict_key, pos: Vector2 = Vector2(0,0), alignment : int = 1):
+func create_piece(type: PackedScene, dict_key: String, pos: Vector2 = Vector2(0,0), alignment : int = 1):
 	var x = pos[0]
 	var y = pos[1]
 	if(str(x) + str(y) in grid):
 		return false;
 	var new_piece = type.instantiate().init(pos, alignment)
 	move_piece(new_piece, new_piece.current_pos)
+	self.connect("noEnergy", new_piece.exhaust)
+	new_piece.connect("pressed", handle_piece_click)
 	grid[str(x) + str(y)] = new_piece
 	add_child(new_piece)
-	#if alignment != 1:
-	add_player_piece(new_piece, dict_key)
+	if alignment != 1:
+		add_player_piece(new_piece, dict_key)
 	return true;
 
 func draw_board():
@@ -145,19 +196,19 @@ func draw_board():
 			else:
 				create_tile(Vector2(x, y), grey, false)
 
-func create_tile(pos: Vector2, color: Color, temp: bool, ):
-	var t = tile.instantiate().init(pos, temp)
-	t.position = Vector2(pos[0] * 32, pos[1] * 32)
+func create_tile(pos: Vector2, color: Color, temp: bool):
+	var t = tile.instantiate().init(pos, temp, temp)
 	t.color = color
 	add_child(t)
 	if (temp):
-		t.connect("pressed", handleHighlightClick)
+		t.connect("pressed", handle_highlight_click)
 		highlights.append(t)
+	return t
 
 func draw_moves(moves_array: Array, keyboard: bool, selected: Vector2):
 	clear_highlights()
 	if keyboard:
-		create_tile(selected, select_color, true)
+		create_tile(selected, select_color, true).disconnect("pressed", handle_highlight_click)
 	for moves in moves_array:
 		for move in moves:
 			if move is Vector2:
@@ -178,9 +229,26 @@ func handle_key(type, reverse: bool):
 		if(pieces.size() > 0):
 			var next_piece = pieces[last_index % pieces.size()]
 			if next_piece:
-				selected_piece = next_piece
-				next_piece.possible_moves()
-				draw_moves(next_piece.available_moves, true, next_piece.current_pos)
+				handle_moves(next_piece)
+
+func handle_moves(piece: Piece):
+	selected_piece = piece
+	piece.possible_moves()
+	draw_moves(piece.available_moves, false, piece.current_pos)
+
+func handle_piece_click(piece: Piece):
+	if initializing:
+		pass
+	else: 
+		handle_moves(piece)
+	
+func change_turn():
+	player_turn *= -1
+
+func handle_progress():
+	if initializing:
+		initializing = false
+	change_turn()
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
@@ -201,6 +269,9 @@ func _input(event):
 		if event.keycode == KEY_BACKSPACE:
 			respawn()
 
-func handleHighlightClick(pos: Vector2):
+func handle_highlight_click(pos: Vector2):
+	var type = 1
+	if initializing:
+		type = 0
 	if selected_piece:
-		move_piece(selected_piece, pos, 1)
+		move_piece(selected_piece, pos, type)

@@ -6,13 +6,34 @@ signal pressed(current_pos : Vector2)
 var interactable = true
 var current_pos = Vector2(0,0)
 
-func init(pos: Vector2, interactable: bool):
+func center_self():
+	anchor_left = 0.5
+	anchor_top = 0.5
+	anchor_right = 0.5
+	anchor_bottom = 0.5
+	return self
+
+func add_border():
+	var ref = ReferenceRect.new()
+	ref.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ref.z_index = 2
+	ref.border_color = Color("BLACK")
+	ref.border_width = 1
+	ref.editor_only = false
+	ref.get_parent_area_size()
+	add_child(ref)
+
+func init(pos: Vector2, can_interact: bool, border: bool = true):
 	current_pos = pos
-	interactable = interactable
+	if border:
+		add_border()
+	
+	interactable = can_interact
+	position = pos * 32
 	if not interactable:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	else:
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_filter = Control.MOUSE_FILTER_PASS
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		
 	return self

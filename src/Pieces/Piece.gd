@@ -1,9 +1,11 @@
 class_name Piece
 extends Sprite2D
 
+signal pressed(node: Piece)
+
 var available_moves: Array
 var current_pos = Vector2(3, 3)
-var board = self.get_parent()
+var board : Board
 var alignment = 1;
 var exhausted = false;
 
@@ -102,17 +104,37 @@ func possible_moves():
 
 func init(pos: Vector2, alignment: int = 1):
 	current_pos = pos
-	self.alignment = alignment
+	alignment = alignment
 	return self
+
+func create_click_box():
+	var block : Tile = board.tile.instantiate().init(Vector2(0,0), true, false).center_self()
+	block.scale = Vector2(1/Globals.scale, 1/Globals.scale)	
+	block.color = Color(Globals.clear)
+	block.connect("pressed", focused)
+	add_child(block)
+	block.position = -0.5 * block.get_parent_area_size()
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	self.board = self.get_parent()
-	self.z_index = 1
-	self.scale = Vector2(Globals.scale, Globals.scale)
-	pass # Replace with function body.
+	board = get_parent()
+	z_index = 1
+	scale = Vector2(Globals.scale, Globals.scale)
+	create_click_box()
 
+func focused(pos: Vector2):
+	pressed.emit(self)
+	print("Pressed")
+
+func exhaust(force: bool = false):
+	exhausted = true
+
+func move(pos:Vector2, interaction: int = 0):
+	current_pos = pos
+	position = pos * 32 + board.center
+	if interaction != 0:
+		exhaust()
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
